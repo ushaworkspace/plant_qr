@@ -39,7 +39,7 @@ $tree = mysqli_fetch_assoc($result);
     http://localhost/plant_qr/campus_tree.php?id=...
 */
 
-$link = "http://localhost/plant_qr/campus_tree.php?id=" . $id;
+$link = "https://plantqr-production.up.railway.app/campus_tree.php?id=" . $id;
 
 $qr_url =
     "https://api.qrserver.com/v1/create-qr-code/" .

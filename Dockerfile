@@ -5,9 +5,10 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     libgl1 \
     libglib2.0-0 \
+    && a2dismod mpm_event mpm_worker \
+    && a2enmod mpm_prefork \
     && docker-php-ext-install mysqli \
     && rm -rf /var/lib/apt/lists/*
-
 COPY . /var/www/html/
 
 RUN python3 -m venv /opt/venv

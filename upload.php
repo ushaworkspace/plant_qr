@@ -58,6 +58,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $file = $_FILES["plant_image"];
 
+
         /* Upload error */
 
         if ($file["error"] !== UPLOAD_ERR_OK) {
@@ -88,10 +89,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     "image/webp"
                 );
 
+
                 /* Check actual image */
 
                 $imageInfo =
                     @getimagesize($file["tmp_name"]);
+
 
                 if ($imageInfo === false) {
 
@@ -114,12 +117,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 } else {
 
+
                     /* ---------------------------------------
                        Save uploaded image
                     ---------------------------------------- */
 
                     $originalName =
                         basename($file["name"]);
+
 
                     $safeName =
                         preg_replace(
@@ -128,11 +133,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             $originalName
                         );
 
+
                     $fileName =
                         time() . "_" . $safeName;
 
+
+                    $imageFolder =
+                        __DIR__ . "/images";
+
+
+                    /* Make sure images folder exists */
+
+                    if (!is_dir($imageFolder)) {
+
+                        mkdir(
+                            $imageFolder,
+                            0777,
+                            true
+                        );
+
+                    }
+
+
                     $targetPath =
-                        __DIR__ . "/images/" . $fileName;
+                        $imageFolder . "/" . $fileName;
+
 
                     if (
                         !move_uploaded_file(
@@ -148,31 +173,82 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     } else {
 
+
                         /* ---------------------------------------
                            Run Python OpenCV prediction
+                           Works on Windows + Railway Linux
                         ---------------------------------------- */
 
                         $pythonFolder =
                             __DIR__ . "/python";
 
+
                         $pythonScript =
                             $pythonFolder . "/predict.py";
 
+
+                        $output = "";
+
+
                         if (file_exists($pythonScript)) {
 
-                            $pythonCommand =
-                                'cd /d "' .
-                                $pythonFolder .
-                                '" && python predict.py "' .
-                                $targetPath .
-                                '" 2>&1';
+
+                            /*
+                             * Windows XAMPP
+                             * ----------------
+                             * Uses: python
+                             *
+                             * Railway Linux
+                             * ----------------
+                             * Uses: /opt/venv/bin/python
+                             */
+
+                            if (PHP_OS_FAMILY === "Windows") {
+
+                                $pythonExecutable = "python";
+
+
+                                $pythonCommand =
+                                    '"' .
+                                    $pythonExecutable .
+                                    '" "' .
+                                    $pythonScript .
+                                    '" "' .
+                                    $targetPath .
+                                    '" 2>&1';
+
+
+                            } else {
+
+                                $pythonExecutable =
+                                    "/opt/venv/bin/python";
+
+
+                                $pythonCommand =
+                                    $pythonExecutable .
+                                    " " .
+                                    escapeshellarg(
+                                        $pythonScript
+                                    ) .
+                                    " " .
+                                    escapeshellarg(
+                                        $targetPath
+                                    ) .
+                                    " 2>&1";
+
+                            }
+
 
                             $output =
-                                shell_exec($pythonCommand);
+                                shell_exec(
+                                    $pythonCommand
+                                );
 
                         } else {
 
-                            $output = "";
+                            $output =
+                                "ERROR: predict.py not found at: " .
+                                $pythonScript;
 
                         }
 
@@ -185,7 +261,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         $confidence = 0;
 
-                        if ($output !== null && $output !== "") {
+
+                        if (
+                            $output !== null &&
+                            trim($output) !== ""
+                        ) {
+
 
                             /* Plant name */
 
@@ -202,7 +283,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             }
 
-                            /* Confidence - used internally only */
+
+                            /* Confidence */
 
                             if (
                                 preg_match(
@@ -213,7 +295,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             ) {
 
                                 $confidence =
-                                    floatval($match[1]);
+                                    floatval(
+                                        $match[1]
+                                    );
 
                             }
 
@@ -225,6 +309,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         ---------------------------------------- */
 
                         if ($predictedPlant !== "") {
+
 
                             $normalizedPrediction =
                                 normalizePlantName(
@@ -255,12 +340,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             if ($dbResult) {
 
+
                                 while (
                                     $row =
                                     mysqli_fetch_assoc(
                                         $dbResult
                                     )
                                 ) {
+
 
                                     $normalizedDBName =
                                         normalizePlantName(
@@ -287,7 +374,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                Result handling
                             ---------------------------------------- */
 
-                            if (count($matchingTrees) > 0) {
+                            if (
+                                count($matchingTrees) > 0
+                            ) {
+
 
                                 $resultMessage =
                                     "Plant identified as: <strong>" .
@@ -295,15 +385,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                         $predictedPlant
                                     ) .
                                     "</strong>";
+
 
                                 $resultMessage .=
                                     "<br><br>" .
                                     "Matching campus trees found: " .
-                                    count($matchingTrees);
+                                    count(
+                                        $matchingTrees
+                                    );
+
 
                                 $resultType = "success";
 
+
                             } else {
+
 
                                 $resultMessage =
                                     "Plant identified as: <strong>" .
@@ -311,19 +407,72 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                         $predictedPlant
                                     ) .
                                     "</strong>";
+
 
                                 $resultMessage .=
                                     "<br><br>" .
                                     "No campus tree records were found for this plant.";
 
+
                                 $resultType = "warning";
 
                             }
 
+
                         } else {
+
+
+                            /*
+                             * Python failed or returned UNKNOWN.
+                             */
 
                             $resultMessage =
                                 "Sorry, the plant could not be identified.";
+
+
+                            /*
+                             * During testing, if Python gives
+                             * an error, show a small useful message.
+                             */
+
+                            if (
+                                $output !== null &&
+                                trim($output) !== ""
+                            ) {
+
+                                $cleanOutput =
+                                    trim($output);
+
+
+                                /*
+                                 * Only show the last part of
+                                 * Python output to avoid a huge
+                                 * error message.
+                                 */
+
+                                if (
+                                    strlen($cleanOutput) > 500
+                                ) {
+
+                                    $cleanOutput =
+                                        substr(
+                                            $cleanOutput,
+                                            -500
+                                        );
+
+                                }
+
+
+                                $resultMessage .=
+                                    "<br><br>" .
+                                    "<small>" .
+                                    htmlspecialchars(
+                                        $cleanOutput
+                                    ) .
+                                    "</small>";
+
+                            }
+
 
                             $resultType = "error";
 
@@ -648,6 +797,8 @@ input[type="file"] {
     line-height: 1.6;
 
     font-size: 15px;
+
+    word-break: break-word;
 }
 
 

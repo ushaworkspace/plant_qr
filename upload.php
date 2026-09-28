@@ -25,7 +25,13 @@ function normalizePlantName($name)
     );
 
     foreach ($removeWords as $word) {
-        $name = preg_replace('/\b' . $word . '\b/', ' ', $name);
+
+        $name = preg_replace(
+            '/\b' . $word . '\b/',
+            ' ',
+            $name
+        );
+
     }
 
     $name = preg_replace('/\s+/', ' ', $name);
@@ -51,7 +57,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if (!isset($_FILES["plant_image"])) {
 
-        $resultMessage = "Please select a plant image.";
+        $resultMessage =
+            "Please select a plant image.";
+
         $resultType = "error";
 
     } else {
@@ -59,29 +67,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $file = $_FILES["plant_image"];
 
 
-        /* Upload error */
+        /* ---------------------------------------
+           Upload error
+        ---------------------------------------- */
 
         if ($file["error"] !== UPLOAD_ERR_OK) {
 
-            $resultMessage = "Unable to upload the image.";
+            $resultMessage =
+                "Unable to upload the image.";
+
             $resultType = "error";
 
         } else {
 
-            /* Maximum file size = 5 MB */
 
-            $maxSize = 5 * 1024 * 1024;
+            /* ---------------------------------------
+               Maximum file size = 10 MB
+            ---------------------------------------- */
+
+            $maxSize = 10 * 1024 * 1024;
+
 
             if ($file["size"] > $maxSize) {
 
                 $resultMessage =
-                    "Image size must be less than 5 MB.";
+                    "Image size must be less than 10 MB.";
 
                 $resultType = "error";
 
             } else {
 
-                /* Allowed image types */
+
+                /* ---------------------------------------
+                   Allowed image types
+                ---------------------------------------- */
 
                 $allowedTypes = array(
                     "image/jpeg",
@@ -90,10 +109,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 );
 
 
-                /* Check actual image */
+                /* ---------------------------------------
+                   Check actual image
+                ---------------------------------------- */
 
                 $imageInfo =
-                    @getimagesize($file["tmp_name"]);
+                    @getimagesize(
+                        $file["tmp_name"]
+                    );
 
 
                 if ($imageInfo === false) {
@@ -123,7 +146,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     ---------------------------------------- */
 
                     $originalName =
-                        basename($file["name"]);
+                        basename(
+                            $file["name"]
+                        );
 
 
                     $safeName =
@@ -141,8 +166,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $imageFolder =
                         __DIR__ . "/images";
 
-
-                    /* Make sure images folder exists */
 
                     if (!is_dir($imageFolder)) {
 
@@ -176,7 +199,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         /* ---------------------------------------
                            Run Python OpenCV prediction
-                           Works on Windows + Railway Linux
                         ---------------------------------------- */
 
                         $pythonFolder =
@@ -190,22 +212,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         $output = "";
 
 
-                        if (file_exists($pythonScript)) {
+                        if (
+                            file_exists(
+                                $pythonScript
+                            )
+                        ) {
 
 
-                            /*
-                             * Windows XAMPP
-                             * ----------------
-                             * Uses: python
-                             *
-                             * Railway Linux
-                             * ----------------
-                             * Uses: /opt/venv/bin/python
-                             */
+                            /* Windows */
 
-                            if (PHP_OS_FAMILY === "Windows") {
+                            if (
+                                PHP_OS_FAMILY === "Windows"
+                            ) {
 
-                                $pythonExecutable = "python";
+                                $pythonExecutable =
+                                    "python";
 
 
                                 $pythonCommand =
@@ -219,6 +240,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                             } else {
+
+
+                                /* Railway / Linux */
 
                                 $pythonExecutable =
                                     "/opt/venv/bin/python";
@@ -268,7 +292,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         ) {
 
 
-                            /* Plant name */
+                            /* FINAL RESULT */
 
                             if (
                                 preg_match(
@@ -279,12 +303,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             ) {
 
                                 $predictedPlant =
-                                    trim($match[1]);
+                                    trim(
+                                        $match[1]
+                                    );
 
                             }
 
 
-                            /* Confidence */
+                            /* CONFIDENCE */
 
                             if (
                                 preg_match(
@@ -308,7 +334,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                            Find matching campus trees
                         ---------------------------------------- */
 
-                        if ($predictedPlant !== "") {
+                        if (
+                            $predictedPlant !== "" &&
+                            strtoupper(
+                                trim(
+                                    $predictedPlant
+                                )
+                            ) !== "UNKNOWN"
+                        ) {
 
 
                             $normalizedPrediction =
@@ -340,7 +373,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             if ($dbResult) {
 
-
                                 while (
                                     $row =
                                     mysqli_fetch_assoc(
@@ -369,44 +401,73 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             }
 
+                        }
 
-                            /* ---------------------------------------
-                               Result handling
-                            ---------------------------------------- */
+
+                        /* ---------------------------------------
+                           Result handling
+                        ---------------------------------------- */
+
+                        if (
+                            strtoupper(
+                                trim(
+                                    $predictedPlant
+                                )
+                            ) === "UNKNOWN" ||
+                            $confidence < 5
+                        ) {
+
+
+                            $resultMessage =
+                                "🌱 Plant could not be identified confidently.";
+
+
+                            $resultMessage .=
+                                "<br><br>" .
+                                "Please upload a clear image of the plant.";
+
+
+                            $resultType =
+                                "warning";
+
+
+                        } elseif (
+                            $predictedPlant !== ""
+                        ) {
+
+
+                            /* Plant identified */
+
+                            $resultMessage =
+                                "🌱 Plant identified as: <strong>" .
+                                htmlspecialchars(
+                                    $predictedPlant
+                                ) .
+                                "</strong>";
+
+
+                            /* Matching trees */
 
                             if (
-                                count($matchingTrees) > 0
+                                count(
+                                    $matchingTrees
+                                ) > 0
                             ) {
-
-
-                                $resultMessage =
-                                    "Plant identified as: <strong>" .
-                                    htmlspecialchars(
-                                        $predictedPlant
-                                    ) .
-                                    "</strong>";
 
 
                                 $resultMessage .=
                                     "<br><br>" .
-                                    "Matching campus trees found: " .
+                                    "🌳 Matching campus trees found: " .
                                     count(
                                         $matchingTrees
                                     );
 
 
-                                $resultType = "success";
+                                $resultType =
+                                    "success";
 
 
                             } else {
-
-
-                                $resultMessage =
-                                    "Plant identified as: <strong>" .
-                                    htmlspecialchars(
-                                        $predictedPlant
-                                    ) .
-                                    "</strong>";
 
 
                                 $resultMessage .=
@@ -414,7 +475,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                     "No campus tree records were found for this plant.";
 
 
-                                $resultType = "warning";
+                                $resultType =
+                                    "warning";
 
                             }
 
@@ -422,59 +484,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         } else {
 
 
-                            /*
-                             * Python failed or returned UNKNOWN.
-                             */
-
                             $resultMessage =
                                 "Sorry, the plant could not be identified.";
 
 
-                            /*
-                             * During testing, if Python gives
-                             * an error, show a small useful message.
-                             */
-
-                            if (
-                                $output !== null &&
-                                trim($output) !== ""
-                            ) {
-
-                                $cleanOutput =
-                                    trim($output);
-
-
-                                /*
-                                 * Only show the last part of
-                                 * Python output to avoid a huge
-                                 * error message.
-                                 */
-
-                                if (
-                                    strlen($cleanOutput) > 500
-                                ) {
-
-                                    $cleanOutput =
-                                        substr(
-                                            $cleanOutput,
-                                            -500
-                                        );
-
-                                }
-
-
-                                $resultMessage .=
-                                    "<br><br>" .
-                                    "<small>" .
-                                    htmlspecialchars(
-                                        $cleanOutput
-                                    ) .
-                                    "</small>";
-
-                            }
-
-
-                            $resultType = "error";
+                            $resultType =
+                                "error";
 
                         }
 
@@ -511,11 +526,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <style>
 
+/* ---------------------------------------
+   General
+---------------------------------------- */
+
 * {
+
     box-sizing: border-box;
+
     margin: 0;
+
     padding: 0;
+
     font-family: Arial, sans-serif;
+
 }
 
 
@@ -531,8 +555,13 @@ body {
         );
 
     padding: 25px;
+
 }
 
+
+/* ---------------------------------------
+   Main container
+---------------------------------------- */
 
 .container {
 
@@ -551,7 +580,9 @@ body {
     text-align: center;
 
     box-shadow:
-        0 8px 25px rgba(0, 0, 0, 0.12);
+        0 8px 25px
+        rgba(0, 0, 0, 0.12);
+
 }
 
 
@@ -560,6 +591,7 @@ body {
     font-size: 52px;
 
     margin-bottom: 10px;
+
 }
 
 
@@ -570,6 +602,7 @@ h1 {
     font-size: 28px;
 
     margin-bottom: 8px;
+
 }
 
 
@@ -580,10 +613,13 @@ h1 {
     font-size: 16px;
 
     margin-bottom: 25px;
+
 }
 
 
-/* Upload Box */
+/* ---------------------------------------
+   Upload box
+---------------------------------------- */
 
 .upload-box {
 
@@ -606,6 +642,7 @@ h1 {
     transition: 0.3s;
 
     text-align: center;
+
 }
 
 
@@ -616,6 +653,7 @@ h1 {
     border-color: #43a047;
 
     transform: translateY(-2px);
+
 }
 
 
@@ -624,6 +662,7 @@ h1 {
     font-size: 45px;
 
     margin-bottom: 15px;
+
 }
 
 
@@ -636,6 +675,7 @@ h1 {
     font-size: 17px;
 
     margin-bottom: 8px;
+
 }
 
 
@@ -646,16 +686,20 @@ h1 {
     font-size: 13px;
 
     line-height: 1.5;
+
 }
 
 
 input[type="file"] {
 
     display: none;
+
 }
 
 
-/* Preview */
+/* ---------------------------------------
+   Image preview
+---------------------------------------- */
 
 #preview {
 
@@ -676,6 +720,7 @@ input[type="file"] {
     padding: 5px;
 
     background: #fafafa;
+
 }
 
 
@@ -688,10 +733,13 @@ input[type="file"] {
     font-size: 14px;
 
     word-break: break-word;
+
 }
 
 
-/* Identify button */
+/* ---------------------------------------
+   Identify button
+---------------------------------------- */
 
 .identify-btn {
 
@@ -716,12 +764,14 @@ input[type="file"] {
     cursor: pointer;
 
     transition: 0.3s;
+
 }
 
 
 .identify-btn:hover {
 
     background: #2e7d32;
+
 }
 
 
@@ -730,10 +780,13 @@ input[type="file"] {
     background: #9e9e9e;
 
     cursor: not-allowed;
+
 }
 
 
-/* Loading */
+/* ---------------------------------------
+   Loading
+---------------------------------------- */
 
 #loading {
 
@@ -746,6 +799,7 @@ input[type="file"] {
     font-weight: bold;
 
     font-size: 15px;
+
 }
 
 
@@ -768,6 +822,7 @@ input[type="file"] {
     vertical-align: middle;
 
     margin-right: 8px;
+
 }
 
 
@@ -784,13 +839,15 @@ input[type="file"] {
 }
 
 
-/* Result */
+/* ---------------------------------------
+   Result message
+---------------------------------------- */
 
 .message {
 
     margin-top: 20px;
 
-    padding: 15px;
+    padding: 18px;
 
     border-radius: 10px;
 
@@ -799,6 +856,7 @@ input[type="file"] {
     font-size: 15px;
 
     word-break: break-word;
+
 }
 
 
@@ -807,6 +865,7 @@ input[type="file"] {
     background: #ffebee;
 
     color: #c62828;
+
 }
 
 
@@ -815,6 +874,7 @@ input[type="file"] {
     background: #fff8e1;
 
     color: #8d6e00;
+
 }
 
 
@@ -823,10 +883,13 @@ input[type="file"] {
     background: #e8f5e9;
 
     color: #2e7d32;
+
 }
 
 
-/* Matching Trees */
+/* ---------------------------------------
+   Matching trees
+---------------------------------------- */
 
 .results-title {
 
@@ -837,6 +900,7 @@ input[type="file"] {
     color: #2e7d32;
 
     font-size: 22px;
+
 }
 
 
@@ -850,6 +914,7 @@ input[type="file"] {
     gap: 18px;
 
     text-align: left;
+
 }
 
 
@@ -864,7 +929,9 @@ input[type="file"] {
     overflow: hidden;
 
     box-shadow:
-        0 4px 12px rgba(0,0,0,0.08);
+        0 4px 12px
+        rgba(0,0,0,0.08);
+
 }
 
 
@@ -879,12 +946,14 @@ input[type="file"] {
     display: block;
 
     background: #eeeeee;
+
 }
 
 
 .tree-card-content {
 
     padding: 18px;
+
 }
 
 
@@ -895,6 +964,7 @@ input[type="file"] {
     margin-bottom: 7px;
 
     font-size: 20px;
+
 }
 
 
@@ -905,6 +975,7 @@ input[type="file"] {
     font-style: italic;
 
     margin-bottom: 10px;
+
 }
 
 
@@ -917,6 +988,7 @@ input[type="file"] {
     font-size: 14px;
 
     margin-bottom: 5px;
+
 }
 
 
@@ -939,16 +1011,20 @@ input[type="file"] {
     font-weight: bold;
 
     font-size: 14px;
+
 }
 
 
 .view-btn:hover {
 
     background: #2e7d32;
+
 }
 
 
-/* Back button */
+/* ---------------------------------------
+   Back button
+---------------------------------------- */
 
 .back-btn {
 
@@ -969,29 +1045,41 @@ input[type="file"] {
     font-weight: bold;
 
     transition: 0.3s;
+
 }
 
 
 .back-btn:hover {
 
     background: #555;
+
 }
 
 
-/* Responsive */
+/* ---------------------------------------
+   Mobile
+---------------------------------------- */
 
 @media (max-width: 700px) {
 
     body {
+
         padding: 15px;
+
     }
+
 
     .container {
+
         padding: 22px;
+
     }
 
+
     .tree-grid {
+
         grid-template-columns: 1fr;
+
     }
 
 }
@@ -1045,9 +1133,13 @@ input[type="file"] {
 
 
             <div class="upload-info">
+
                 Click here to select an image
+
                 <br>
-                JPG, PNG or WEBP • Maximum 5 MB
+
+                JPG, PNG or WEBP • Maximum 10 MB
+
             </div>
 
         </label>
@@ -1100,10 +1192,14 @@ input[type="file"] {
 
     <?php if ($resultMessage !== "") { ?>
 
-        <div class="message <?php echo $resultType; ?>">
+        <div
+            class="message <?php echo $resultType; ?>"
+        >
 
             <?php
-                echo $resultMessage;
+
+            echo $resultMessage;
+
             ?>
 
         </div>
@@ -1122,20 +1218,40 @@ input[type="file"] {
 
         <div class="tree-grid">
 
-            <?php foreach ($matchingTrees as $tree) { ?>
+
+            <?php
+
+            foreach (
+                $matchingTrees
+                as $tree
+            ) {
+
+            ?>
+
 
                 <div class="tree-card">
 
 
                     <?php if (!empty($tree["image"])) { ?>
 
+
                         <img
-                            src="<?php echo htmlspecialchars($tree["image"]); ?>"
-                            alt="<?php echo htmlspecialchars($tree["plant_name"]); ?>"
+                            src="<?php
+                                echo htmlspecialchars(
+                                    $tree["image"]
+                                );
+                            ?>"
+                            alt="<?php
+                                echo htmlspecialchars(
+                                    $tree["plant_name"]
+                                );
+                            ?>"
                             class="tree-card-image"
                         >
 
+
                     <?php } else { ?>
+
 
                         <div
                             class="tree-card-image"
@@ -1146,8 +1262,11 @@ input[type="file"] {
                                 font-size:55px;
                             "
                         >
+
                             🌳
+
                         </div>
+
 
                     <?php } ?>
 
@@ -1158,15 +1277,18 @@ input[type="file"] {
                         <h3>
 
                             <?php
+
                             echo htmlspecialchars(
                                 $tree["plant_name"]
                             );
+
                             ?>
 
                         </h3>
 
 
                         <div class="scientific">
+
 
                             <?php
 
@@ -1182,23 +1304,29 @@ input[type="file"] {
 
                             } else {
 
-                                echo "Scientific name not available";
+                                echo
+                                    "Scientific name not available";
 
                             }
 
                             ?>
 
+
                         </div>
 
 
                         <div class="tree-info">
 
-                            <strong>Tree Code:</strong>
+                            <strong>
+                                Tree Code:
+                            </strong>
 
                             <?php
+
                             echo htmlspecialchars(
                                 $tree["tree_code"]
                             );
+
                             ?>
 
                         </div>
@@ -1206,12 +1334,16 @@ input[type="file"] {
 
                         <div class="tree-info">
 
-                            <strong>Location:</strong>
+                            <strong>
+                                Location:
+                            </strong>
 
                             <?php
+
                             echo htmlspecialchars(
                                 $tree["location"]
                             );
+
                             ?>
 
                         </div>
@@ -1219,19 +1351,27 @@ input[type="file"] {
 
                         <div class="tree-info">
 
-                            <strong>Type:</strong>
+                            <strong>
+                                Type:
+                            </strong>
 
                             <?php
+
                             echo htmlspecialchars(
                                 $tree["tree_type"]
                             );
+
                             ?>
 
                         </div>
 
 
                         <a
-                            href="campus_tree.php?id=<?php echo intval($tree["id"]); ?>"
+                            href="campus_tree.php?id=<?php
+                                echo intval(
+                                    $tree["id"]
+                                );
+                            ?>"
                             class="view-btn"
                         >
 
@@ -1242,11 +1382,15 @@ input[type="file"] {
 
                     </div>
 
+
                 </div>
+
 
             <?php } ?>
 
+
         </div>
+
 
     <?php } ?>
 
@@ -1266,45 +1410,72 @@ input[type="file"] {
 
 <script>
 
+/* ---------------------------------------
+   Elements
+---------------------------------------- */
+
 var imageInput =
-    document.getElementById("plant_image");
+    document.getElementById(
+        "plant_image"
+    );
+
 
 var preview =
-    document.getElementById("preview");
+    document.getElementById(
+        "preview"
+    );
+
 
 var fileName =
-    document.getElementById("fileName");
+    document.getElementById(
+        "fileName"
+    );
+
 
 var identifyBtn =
-    document.getElementById("identifyBtn");
+    document.getElementById(
+        "identifyBtn"
+    );
+
 
 var uploadForm =
-    document.getElementById("uploadForm");
+    document.getElementById(
+        "uploadForm"
+    );
+
 
 var loading =
-    document.getElementById("loading");
+    document.getElementById(
+        "loading"
+    );
 
 
-/* Image selection */
+/* ---------------------------------------
+   Image selection
+---------------------------------------- */
 
 imageInput.addEventListener(
     "change",
     function () {
 
-        var file = this.files[0];
+        var file =
+            this.files[0];
 
 
         if (!file) {
 
-            preview.style.display = "none";
+            preview.style.display =
+                "none";
 
             preview.src = "";
 
             fileName.innerHTML = "";
 
-            identifyBtn.disabled = true;
+            identifyBtn.disabled =
+                true;
 
             return;
+
         }
 
 
@@ -1330,22 +1501,28 @@ imageInput.addEventListener(
             };
 
 
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(
+            file
+        );
 
 
-        identifyBtn.disabled = false;
+        identifyBtn.disabled =
+            false;
 
     }
 );
 
 
-/* Form submit */
+/* ---------------------------------------
+   Form submit
+---------------------------------------- */
 
 uploadForm.addEventListener(
     "submit",
     function () {
 
-        identifyBtn.disabled = true;
+        identifyBtn.disabled =
+            true;
 
         identifyBtn.innerHTML =
             "🔍 Identifying...";

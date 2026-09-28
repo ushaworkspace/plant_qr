@@ -19,10 +19,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $tree_type = trim($_POST['tree_type'] ?? '');
     $location = trim($_POST['location'] ?? '');
 
-    /* NEW: Latitude and Longitude */
-    $latitude = trim($_POST['latitude'] ?? '');
-    $longitude = trim($_POST['longitude'] ?? '');
-
     $description = trim($_POST['description'] ?? '');
     $medicinal = trim($_POST['medicinal'] ?? '');
     $water = trim($_POST['water'] ?? '');
@@ -36,30 +32,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($tree_code == "" || $plant_name == "" || $location == "") {
 
         $message = "Please fill Tree Code, Plant Name and Location.";
-        $message_type = "error";
-
-    } elseif (
-        $latitude != "" &&
-        !is_numeric($latitude)
-    ) {
-
-        $message = "Latitude must be a valid number.";
-        $message_type = "error";
-
-    } elseif (
-        $longitude != "" &&
-        !is_numeric($longitude)
-    ) {
-
-        $message = "Longitude must be a valid number.";
-        $message_type = "error";
-
-    } elseif (
-        ($latitude != "" && ($latitude < -90 || $latitude > 90)) ||
-        ($longitude != "" && ($longitude < -180 || $longitude > 180))
-    ) {
-
-        $message = "Invalid latitude or longitude value.";
         $message_type = "error";
 
     } elseif (!isset($_FILES['image']) || $_FILES['image']['error'] != UPLOAD_ERR_OK) {
@@ -147,11 +119,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 if (move_uploaded_file($image_tmp, $image_path)) {
 
                     /*
-                     * Insert into campus_trees
+                     * Insert campus tree details
                      *
-                     * NEW FIELDS:
-                     * latitude
-                     * longitude
+                     * Location is retained.
+                     * Latitude and Longitude removed.
                      */
 
                     $sql = "INSERT INTO campus_trees
@@ -162,8 +133,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         family,
                         tree_type,
                         location,
-                        latitude,
-                        longitude,
                         description,
                         medicinal,
                         water,
@@ -177,33 +146,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     )
                     VALUES
                     (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                     )";
 
                     $stmt = mysqli_prepare($conn, $sql);
 
-                    /*
-                     * Convert empty values to NULL
-                     * for database storage.
-                     */
-
-                    $latitude_value =
-                        ($latitude === "") ? null : (float)$latitude;
-
-                    $longitude_value =
-                        ($longitude === "") ? null : (float)$longitude;
-
                     mysqli_stmt_bind_param(
                         $stmt,
-                        "ssssssddssssssssss",
+                        "ssssssssssssssss",
                         $tree_code,
                         $plant_name,
                         $scientific_name,
                         $family,
                         $tree_type,
                         $location,
-                        $latitude_value,
-                        $longitude_value,
                         $description,
                         $medicinal,
                         $water,
@@ -352,12 +308,6 @@ textarea {
     font-size: 12px;
     color: #666;
     margin-top: 6px;
-}
-
-.location-note {
-    font-size: 12px;
-    color: #777;
-    margin-top: 5px;
 }
 
 button {
@@ -543,49 +493,6 @@ button:hover {
             placeholder="Example: Near Main Block"
             required
         >
-
-    </div>
-
-</div>
-
-
-<!-- NEW: MAP COORDINATES -->
-
-<div class="section-title">
-    📍 Tree Map Location
-</div>
-
-<div class="form-row">
-
-    <div class="form-group">
-
-        <label>Latitude</label>
-
-        <input
-            type="text"
-            name="latitude"
-            placeholder="Example: 9.1667"
-        >
-
-        <div class="location-note">
-            Enter the tree's latitude coordinate.
-        </div>
-
-    </div>
-
-    <div class="form-group">
-
-        <label>Longitude</label>
-
-        <input
-            type="text"
-            name="longitude"
-            placeholder="Example: 77.8667"
-        >
-
-        <div class="location-note">
-            Enter the tree's longitude coordinate.
-        </div>
 
     </div>
 

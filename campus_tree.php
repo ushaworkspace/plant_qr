@@ -34,24 +34,9 @@ function showValue($value)
     return nl2br(htmlspecialchars($value));
 }
 
-
-/* Map coordinates */
-
-$latitude = $tree['latitude'] ?? null;
-$longitude = $tree['longitude'] ?? null;
-
-$has_map =
-    $latitude !== null &&
-    $longitude !== null &&
-    $latitude !== '' &&
-    $longitude !== '' &&
-    is_numeric($latitude) &&
-    is_numeric($longitude);
-
 ?>
 
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
@@ -66,18 +51,6 @@ $has_map =
 <title>
 <?php echo htmlspecialchars($tree['plant_name']); ?> - Campus Tree
 </title>
-
-
-<!-- Leaflet CSS -->
-
-<?php if ($has_map): ?>
-
-<link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
-
-<?php endif; ?>
 
 
 <!-- Google Translate -->
@@ -391,78 +364,6 @@ body {
 
 
 /* ---------------------------------------
-   Map
----------------------------------------- */
-
-.map-card {
-
-    background: white;
-
-    border-radius: 14px;
-
-    padding: 20px;
-
-    box-shadow:
-        0 5px 18px rgba(0,0,0,0.08);
-
-    grid-column: 1 / -1;
-}
-
-.map-card h2 {
-
-    margin: 0 0 15px;
-
-    color: #2e7d32;
-
-    font-size: 19px;
-}
-
-#map {
-
-    width: 100%;
-
-    height: 400px;
-
-    border-radius: 12px;
-
-    overflow: hidden;
-}
-
-.coordinates {
-
-    margin-top: 10px;
-
-    font-size: 13px;
-
-    color: #777;
-
-    text-align: center;
-}
-
-
-/* ---------------------------------------
-   No Map
----------------------------------------- */
-
-.no-map {
-
-    background: #fff8e1;
-
-    border-left: 5px solid #f9a825;
-
-    color: #795548;
-
-    padding: 15px;
-
-    border-radius: 8px;
-
-    font-size: 14px;
-
-    line-height: 1.5;
-}
-
-
-/* ---------------------------------------
    Footer
 ---------------------------------------- */
 
@@ -508,8 +409,7 @@ body {
 
     }
 
-    .card.full,
-    .map-card {
+    .card.full {
 
         grid-column: auto;
 
@@ -518,12 +418,6 @@ body {
     .tree-image {
 
         max-height: 350px;
-
-    }
-
-    #map {
-
-        height: 320px;
 
     }
 
@@ -707,6 +601,8 @@ echo showValue(
 </div>
 
 
+<!-- Location kept -->
+
 <div class="card full location">
 
 <h2>
@@ -724,53 +620,6 @@ echo showValue(
 ?>
 
 </p>
-
-</div>
-
-
-<!-- --------------------------------
-     MAP
---------------------------------- -->
-
-<div class="map-card">
-
-<h2>
-    🗺️ Tree Location on Map
-</h2>
-
-
-<?php if ($has_map): ?>
-
-<div id="map"></div>
-
-<div class="coordinates">
-
-Latitude:
-<strong>
-<?php echo htmlspecialchars($latitude); ?>
-</strong>
-
-&nbsp; | &nbsp;
-
-Longitude:
-<strong>
-<?php echo htmlspecialchars($longitude); ?>
-</strong>
-
-</div>
-
-<?php else: ?>
-
-<div class="no-map">
-
-📍 Map location is not available for this tree.
-
-Please add the latitude and longitude from the
-<strong>Edit Campus Tree</strong> page.
-
-</div>
-
-<?php endif; ?>
 
 </div>
 
@@ -975,62 +824,6 @@ College Campus Plant Information System
 
 
 </div>
-
-
-<!-- --------------------------------
-     Leaflet JS
---------------------------------- -->
-
-<?php if ($has_map): ?>
-
-<script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-</script>
-
-<script>
-
-const latitude = <?php echo (float)$latitude; ?>;
-const longitude = <?php echo (float)$longitude; ?>;
-
-const map = L.map('map').setView(
-    [latitude, longitude],
-    18
-);
-
-
-/* OpenStreetMap */
-
-L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
-    }
-).addTo(map);
-
-
-/* Tree marker */
-
-const marker = L.marker(
-    [latitude, longitude]
-).addTo(map);
-
-
-/* Popup */
-
-marker.bindPopup(
-    "<strong>" +
-    <?php echo json_encode($tree['plant_name']); ?> +
-    "</strong><br>" +
-    "Tree Code: " +
-    <?php echo json_encode($tree['tree_code']); ?> +
-    "<br>" +
-    <?php echo json_encode($tree['location']); ?>
-).openPopup();
-
-</script>
-
-<?php endif; ?>
 
 
 <!-- --------------------------------

@@ -41,10 +41,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $tree_type = trim($_POST['tree_type'] ?? '');
     $location = trim($_POST['location'] ?? '');
 
-    /* NEW: Latitude and Longitude */
-    $latitude = trim($_POST['latitude'] ?? '');
-    $longitude = trim($_POST['longitude'] ?? '');
-
     $description = trim($_POST['description'] ?? '');
     $medicinal = trim($_POST['medicinal'] ?? '');
     $water = trim($_POST['water'] ?? '');
@@ -58,30 +54,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($tree_code == "" || $plant_name == "" || $location == "") {
 
         $message = "Please fill Tree Code, Plant Name and Location.";
-        $message_type = "error";
-
-    } elseif (
-        $latitude != "" &&
-        !is_numeric($latitude)
-    ) {
-
-        $message = "Latitude must be a valid number.";
-        $message_type = "error";
-
-    } elseif (
-        $longitude != "" &&
-        !is_numeric($longitude)
-    ) {
-
-        $message = "Longitude must be a valid number.";
-        $message_type = "error";
-
-    } elseif (
-        ($latitude != "" && ($latitude < -90 || $latitude > 90)) ||
-        ($longitude != "" && ($longitude < -180 || $longitude > 180))
-    ) {
-
-        $message = "Invalid latitude or longitude value.";
         $message_type = "error";
 
     } else {
@@ -195,17 +167,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             if ($message == "") {
 
-                /*
-                 * Convert empty coordinates to NULL
-                 */
-
-                $latitude_value =
-                    ($latitude === "") ? null : (float)$latitude;
-
-                $longitude_value =
-                    ($longitude === "") ? null : (float)$longitude;
-
-
                 $update_sql = "UPDATE campus_trees SET
                     tree_code = ?,
                     plant_name = ?,
@@ -213,8 +174,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     family = ?,
                     tree_type = ?,
                     location = ?,
-                    latitude = ?,
-                    longitude = ?,
                     description = ?,
                     medicinal = ?,
                     water = ?,
@@ -234,15 +193,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 mysqli_stmt_bind_param(
                     $update_stmt,
-                    "ssssssddssssssssssi",
+                    "ssssssssssssssssi",
                     $tree_code,
                     $plant_name,
                     $scientific_name,
                     $family,
                     $tree_type,
                     $location,
-                    $latitude_value,
-                    $longitude_value,
                     $description,
                     $medicinal,
                     $water,
@@ -407,12 +364,6 @@ textarea {
     padding: 15px;
     border: 1px dashed #66bb6a;
     border-radius: 10px;
-}
-
-.location-note {
-    font-size: 12px;
-    color: #777;
-    margin-top: 5px;
 }
 
 button {
@@ -603,52 +554,6 @@ Climber
     value="<?php echo htmlspecialchars($tree['location']); ?>"
     required
 >
-
-</div>
-
-</div>
-
-
-<!-- MAP COORDINATES -->
-
-<div class="section-title">
-    📍 Tree Map Location
-</div>
-
-<div class="form-row">
-
-<div class="form-group">
-
-<label>Latitude</label>
-
-<input
-    type="text"
-    name="latitude"
-    value="<?php echo htmlspecialchars($tree['latitude'] ?? ''); ?>"
-    placeholder="Example: 9.1667"
->
-
-<div class="location-note">
-    Example: 9.1667
-</div>
-
-</div>
-
-
-<div class="form-group">
-
-<label>Longitude</label>
-
-<input
-    type="text"
-    name="longitude"
-    value="<?php echo htmlspecialchars($tree['longitude'] ?? ''); ?>"
-    placeholder="Example: 77.8667"
->
-
-<div class="location-note">
-    Example: 77.8667
-</div>
 
 </div>
 

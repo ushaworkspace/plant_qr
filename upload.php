@@ -73,8 +73,42 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($file["error"] !== UPLOAD_ERR_OK) {
 
+            $errorCode = $file["error"];
+
+            $errorMessages = array(
+
+                UPLOAD_ERR_INI_SIZE =>
+                    "The uploaded file exceeds the server upload limit.",
+
+                UPLOAD_ERR_FORM_SIZE =>
+                    "The uploaded file is too large.",
+
+                UPLOAD_ERR_PARTIAL =>
+                    "The image was only partially uploaded.",
+
+                UPLOAD_ERR_NO_FILE =>
+                    "No image was uploaded.",
+
+                UPLOAD_ERR_NO_TMP_DIR =>
+                    "Server temporary folder is missing.",
+
+                UPLOAD_ERR_CANT_WRITE =>
+                    "Server could not save the uploaded image.",
+
+                UPLOAD_ERR_EXTENSION =>
+                    "A server extension stopped the upload."
+
+            );
+
+            $reason =
+                isset($errorMessages[$errorCode])
+                ? $errorMessages[$errorCode]
+                : "Unknown upload error.";
+
             $resultMessage =
-                "Unable to upload the image.";
+                "Upload failed.<br><br>" .
+                "Error Code: " . $errorCode . "<br>" .
+                $reason;
 
             $resultType = "error";
 

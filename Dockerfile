@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y \
 
 COPY . /var/www/html/
 
+COPY php.ini /usr/local/etc/php/conf.d/uploads.ini
+
 RUN python3 -m venv /opt/venv
 
 RUN /opt/venv/bin/pip install --no-cache-dir -r /var/www/html/requirements.txt
